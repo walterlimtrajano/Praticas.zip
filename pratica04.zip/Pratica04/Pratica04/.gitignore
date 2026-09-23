@@ -1,0 +1,25 @@
+# Credenciais e configuração local
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Ambientes virtuais
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Editores e sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Arquivos temporários do Office (ex.: ~$documento.docx)
+~$*
