@@ -19,45 +19,64 @@ Repositório com as práticas da disciplina de Implementação e Geren. Bancos d
 ## Estrutura do repositório
 
 ```
-Praticas/
-├── README.md
-├── .gitignore
-├── Pratica04/
-│   ├── .env.example
-│   ├── code/                  # versão híbrida (v1)
-│   │   ├── streamlit_app.py
-│   │   ├── db_utils.py
-│   │   └── requirements.txt
-│   └── code-4/
-│       └── code/              # versão MongoDB (v2)
-│           ├── streamlit_app.py
-│           ├── db_utils.py
-│           ├── ingest_openf1.py
-│           └── requirements.txt
-├── Pratica05/
-│   ├── .env.example
-│   ├── streamlit_app.py
-│   ├── db_utils.py
-│   ├── seed_db.py
-│   ├── recuperar.py
-│   └── requirements.txt
-└── Pratica07/
-    └── smart_city/
-        ├── docker-compose.yml
-        ├── Dockerfile.backend
-        ├── Dockerfile.dashboard
-        ├── requirements.txt
-        ├── gerar_restaurantes.py
-        ├── backend/
-        │   └── main.py
-        ├── dashboard/
-        │   ├── app.py
-        │   ├── components/         # antes chamada `pages/` (ver Pontos de atenção)
-        │   │   ├── map_view.py
-        │   │   └── analytics.py
-        │   └── utils/
-        └── scripts/
-            └── seed_data.py
+Directory structure:
+└── walterlimtrajano-praticas.zip/
+    ├── README.MD
+    ├── pratica04.zip/
+    │   └── Pratica04/
+    │       └── Pratica04/
+    │           ├── .env.example
+    │           ├── code/               # versão híbrida (v1)
+    │           │   ├── db_utils.py
+    │           │   ├── requirements.txt
+    │           │   └── streamlit_app.py
+    │           └── code-4/
+    │               └── code/           # versão MongoDB (v2)
+    │                   ├── db_utils.py
+    │                   ├── ingest_openf1.py
+    │                   ├── requirements.txt
+    │                   └── streamlit_app.py
+    ├── pratica05.zip/
+    │   └── Pratica05/
+    │       └── Pratica05/
+    │           ├── Práticas de Laboratório - Parte 5 - Sistema de Aplicação Poliglota.docx
+    │           └── code/
+    │               ├── readme.md
+    │               ├── db_utils.py
+    │               ├── recuperar.py
+    │               ├── requirements.txt
+    │               ├── seed_db.py
+    │               ├── streamlit_app.py
+    │               └── .env.example
+    └── pratica07.zip/
+        └── Pratica07/
+            └── Pratica07/
+                ├── gerar_restaurantes.py
+                ├── Pratica07.docx
+                └── smart_city/
+                    ├── README.md
+                    ├── docker-compose.yml
+                    ├── Dockerfile.backend
+                    ├── Dockerfile.dashboard
+                    ├── requirements.txt
+                    ├── backend/
+                    │   ├── main.py
+                    │   ├── api/
+                    │   │   └── routes.py
+                    │   ├── db/
+                    │   │   ├── mongodb.py
+                    │   │   └── sqlite.py
+                    │   └── models/
+                    │       ├── geo_models.py
+                    │       └── sql_models.py
+                    ├── dashboard/
+                    │   ├── app.py
+                    │   └── components/  # antes chamada `pages/` (ver Pontos de atenção)
+                    │       ├── analytics.py
+                    │       └── map_view.py
+                    └── scripts/
+                        └── seed_data.py
+
 ```
 
 ---
