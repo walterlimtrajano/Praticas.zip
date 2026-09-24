@@ -1,18 +1,20 @@
 # 📚 Práticas
 
-Repositório com as práticas da disciplina de manipulação de dados. Cada prática fica em sua própria pasta, com código, `requirements.txt` e `.env.example` próprios. Toda a documentação está neste arquivo.
+Repositório com as práticas da disciplina de Implementação e Geren. Bancos de Dados Nosql. Cada prática fica em sua própria pasta, com código, `requirements.txt` e `.env.example` próprios. Toda a documentação está neste arquivo.
 
 ## Índice
 
 - [Como usar qualquer prática](#como-usar-qualquer-prática)
 - [Prática 04: Explorador de dados de F1 (MongoDB e API OpenF1)](#prática-04-explorador-de-dados-de-f1-mongodb-e-api-openf1)
 - [Prática 05: Persistência poliglota (MongoDB e SQLite)](#prática-05-persistência-poliglota-mongodb-e-sqlite)
+- [Prática 07: Smart City Dashboard (MongoDB, SQLite e Docker)](#prática-07-smart-city-dashboard-mongodb-sqlite-e-docker)
 - [Problemas comuns](#problemas-comuns)
 
 | Prática | Tema | Tecnologias |
 |---|---|---|
 | **04** | Explorador de dados de F1, com uma versão híbrida (MongoDB, API OpenF1 e mock) e outra só com MongoDB, com script de ingestão | Streamlit, MongoDB, API OpenF1, Plotly |
 | **05** | Persistência poliglota: dados brutos no MongoDB e relatórios sumarizados no SQLite | Streamlit, MongoDB, SQLite, SQLAlchemy, Plotly |
+| **07** | Dashboard geoespacial de cidade inteligente (mapas, filtros e analytics), com API própria e execução via Docker Compose | FastAPI, Streamlit, MongoDB, SQLite, Docker, Folium, Plotly |
 
 ## Estrutura do repositório
 
@@ -32,13 +34,30 @@ Praticas/
 │           ├── db_utils.py
 │           ├── ingest_openf1.py
 │           └── requirements.txt
-└── Pratica05/
-    ├── .env.example
-    ├── streamlit_app.py
-    ├── db_utils.py
-    ├── seed_db.py
-    ├── recuperar.py
-    └── requirements.txt
+├── Pratica05/
+│   ├── .env.example
+│   ├── streamlit_app.py
+│   ├── db_utils.py
+│   ├── seed_db.py
+│   ├── recuperar.py
+│   └── requirements.txt
+└── Pratica07/
+    └── smart_city/
+        ├── docker-compose.yml
+        ├── Dockerfile.backend
+        ├── Dockerfile.dashboard
+        ├── requirements.txt
+        ├── gerar_restaurantes.py
+        ├── backend/
+        │   └── main.py
+        ├── dashboard/
+        │   ├── app.py
+        │   ├── components/         # antes chamada `pages/` (ver Pontos de atenção)
+        │   │   ├── map_view.py
+        │   │   └── analytics.py
+        │   └── utils/
+        └── scripts/
+            └── seed_data.py
 ```
 
 ---
@@ -80,6 +99,8 @@ python -c "from urllib.parse import quote_plus as q; u=input('usuario: '); p=inp
 ```
 
 - **Use bancos MongoDB com nomes diferentes** em cada prática (por exemplo, `openf1_data` na 04 e `openf1_pratica05` na 05), porque alguns scripts de povoamento **apagam coleções** do banco configurado.
+
+> A **Prática 07** é uma exceção a esse fluxo: ela não usa `venv` nem `.env` — roda inteira via **Docker Compose**. Veja a seção própria abaixo.
 
 ---
 
@@ -255,17 +276,112 @@ Ele executa `PRAGMA integrity_check`. Se o banco estiver íntegro, nada acontece
 
 ---
 
+## Prática 07: Smart City Dashboard (MongoDB, SQLite e Docker)
+
+Dashboard geoespacial de cidade inteligente: mapa interativo, filtros por categoria/raio/data e gráficos de analytics sobre pontos urbanos (alagamentos, iluminação, zonas de risco, parques, hospitais). Diferente das práticas anteriores, tudo roda como **três containers Docker** orquestrados via `docker-compose.yml`:
+
+| Serviço | Papel | Porta |
+|---|---|---|
+| `mongodb` | Dados geoespaciais (GeoJSON), com índice `2dsphere` na coleção `spatial_data` | 27017 |
+| `backend` | API REST em FastAPI, conecta no MongoDB e no SQLite | 8000 |
+| `dashboard` | Frontend em Streamlit, consome a API do backend | 8501 |
+
+Não há `.env`/`venv` a configurar manualmente aqui: as variáveis (`MONGO_URI`, `SQLITE_DB_PATH`, `API_URL`) já vêm definidas no `docker-compose.yml`, injetadas nos containers.
+
+### Pré-requisitos
+
+- Docker e Docker Compose instalados e funcionando.
+
+### Executando
+
+Dentro de `Pratica07/smart_city`:
+
+```bash
+docker compose up -d --build
+```
+
+Isso builda as imagens do `backend` e do `dashboard` e sobe os três serviços em segundo plano (`-d`). Para acompanhar os logs:
+
+```bash
+docker compose logs -f
+```
+
+Acesse:
+
+- **Dashboard:** http://localhost:8501
+- **API (Swagger):** http://localhost:8000/docs
+
+Para parar tudo:
+
+```bash
+docker compose down
+```
+
+### Populando o banco
+
+O container do MongoDB sobe **vazio**. Sem dados, os filtros do dashboard ficam sem opções e o mapa/analytics mostram "Nenhum dado encontrado". É preciso rodar o script de seed, que já vai junto na imagem do backend:
+
+```bash
+docker exec -it smart_city_backend python scripts/seed_data.py
+```
+
+Para conferir quantos documentos entraram:
+
+```bash
+docker exec -it smart_city_mongo mongosh geo_analytics --eval "db.spatial_data.countDocuments()"
+```
+
+Também existe `gerar_restaurantes.py`, que gera um dataset alternativo (`restaurantes.json`, ~2050 documentos fictícios de restaurantes com localização) — não é o dataset usado pelo `seed_data.py`/dashboard atual, mas fica disponível para outros usos ou testes de carga de dados no Mongo.
+
+### Estrutura dos dados
+
+**MongoDB** (banco `geo_analytics`, coleção `spatial_data`, com índice `2dsphere` em `geometry`):
+
+| Campo | Descrição |
+|---|---|
+| `name` | Nome do ponto (ex.: "Alagamento 3", "Hospital 5") |
+| `category` | `alagamento`, `iluminacao`, `risco`, `parque`, `hospital`, entre outras |
+| `geometry` | GeoJSON (`Point` ou `Polygon`) |
+| `properties` | Campos livres por categoria (ex.: `severity`, `status`, `beds`, `emergency`) |
+| `timestamp` | Data/hora do registro |
+
+**Principais endpoints da API** (documentação completa em `/docs`):
+
+| Endpoint | Descrição |
+|---|---|
+| `GET /api/v1/spatial-data` | Lista pontos geoespaciais, com filtro opcional por `category` e `limit` |
+| `GET /api/v1/categories` | Lista as categorias disponíveis (usado para popular os filtros) |
+| `GET /api/v1/analytics/aggregated` | Estatísticas agregadas para os gráficos |
+| `GET/POST/DELETE /api/v1/dashboard-views` | Salvar, listar e remover visualizações (filtros salvos, persistidos no SQLite) |
+
+### Pontos de atenção
+
+- **Nomes de arquivo sensíveis:** alguns downloads/exports chegam com nomes ligeiramente diferentes do que o Docker espera (ex.: `docker-compose.yml.yaml` em vez de `docker-compose.yml`, `Dockerfile_backend.txt` em vez de `Dockerfile.backend`, `requeriments.txt` em vez de `requirements.txt`). Confira com `ls` antes de rodar `docker compose up` se aparecer erro de arquivo não encontrado.
+- **`API_URL` nunca deve ser `localhost` dentro do container do dashboard.** Containers diferentes não compartilham `localhost` entre si — o dashboard precisa apontar para o nome do serviço no Compose (`http://backend:8000/api/v1`), não para `http://localhost:8000/api/v1`. Isso já está resolvido no `dashboard/app.py` lendo a variável de ambiente `API_URL` em vez de usar um valor fixo.
+- **Import do dashboard como pacote:** como o Streamlit executa `dashboard/app.py` como script solto, imports absolutos como `from dashboard.components... import ...` só funcionam com `PYTHONPATH=/app` definido no serviço `dashboard` do `docker-compose.yml`.
+- **A pasta `dashboard/pages/` foi renomeada para `dashboard/components/`.** O Streamlit detecta automaticamente qualquer pasta `pages/` no mesmo nível do script principal e cria páginas de navegação para cada arquivo dentro dela — o que não fazia sentido aqui, pois esses arquivos só expõem funções (`render_map`, `render_analytics`) chamadas de dentro de `app.py`, e apareciam em branco quando acessados como página própria (`/map_view`, `/analytics`).
+- **Datas não são serializáveis em JSON por padrão:** ao salvar uma visualização, os campos de data (`st.date_input`) precisam ser convertidos com `.isoformat()` antes de entrar no corpo da requisição (`json=...`), senão o `requests.post` falha com `Object of type date is not JSON serializable`.
+- **Mudanças em arquivos locais só valem após rebuild:** o Dockerfile copia o código para dentro da imagem no momento do build (`COPY dashboard/ ./dashboard/`). Editar um arquivo fora do container (ou até dentro dele, via `docker exec`) não afeta o container já em execução — é preciso rodar `docker compose up -d --build <serviço>` de novo.
+- **`st.session_state` não pode ser alterado após o widget já ter sido criado com aquela `key` no mesmo ciclo** (ex.: tentar limpar um `st.text_input` fazendo `st.session_state.view_name = ''` depois de o widget já existir na tela gera erro). A solução é usar uma flag verificada **antes** de o widget ser instanciado, seguida de `st.rerun()`.
+
+---
+
 ## Problemas comuns
 
 | Sintoma | Causa provável |
 |---|---|
 | "Não foi possível conectar ao MongoDB" / "Erro ao conectar ao MongoDB" | Variável de conexão ausente ou com nome errado, ou MongoDB desligado. O motivo exato aparece no terminal. |
 | `Port contains non-digit characters` | Senha com caracteres especiais sem codificar na URI. |
-| "Nenhuma sessão de corrida encontrada" / "Nenhum dado de ano encontrado" | Banco sem dados. Na Prática 04 rode `ingest_openf1.py`; na 05, `seed_db.py`. |
+| "Nenhuma sessão de corrida encontrada" / "Nenhum dado de ano encontrado" | Banco sem dados. Na Prática 04 rode `ingest_openf1.py`; na 05, `seed_db.py`; na 07, `scripts/seed_data.py` dentro do container. |
 | "Nenhum piloto encontrado" / "Não foram encontrados dados de voltas" (Prática 04) | Corrida sem pilotos ou voltas no banco. Rode `ingest_openf1.py`. |
 | Mudei o `.env` e nada mudou | O `.env` só é lido na inicialização, ou o nome da variável está errado. Reinicie o Streamlit. |
 | Lista com só 3 GPs (Austrália, Brasil, Mônaco) na v1 | O mock está ativo: sem internet ou API fora do ar. |
-| Histórico do SQLite vazio depois de rodar o seed de novo | O `seed_db.py` recria a tabela e zera o histórico. |
+| Histórico do SQLite vazio depois de rodar o seed de novo | O `seed_db.py`/`seed_data.py` recria a tabela e zera o histórico. |
 | Dois `analysis_reports.db` diferentes | O SQLite é criado na pasta onde o comando foi executado. Rode sempre de dentro da pasta da prática. |
 | `venv\Scripts\activate: command not found` | No Git Bash use `source venv/Scripts/activate`. |
-| Não consigo digitar no terminal | O Streamlit ocupa o terminal. Use `Ctrl+C` para parar ou abra outro terminal. |
+| Não consigo digitar no terminal | O Streamlit ocupa o terminal. Use `Ctrl+C` para parar ou abra outro terminal, ou suba os containers com `docker compose up -d` (Prática 07). |
+| `no configuration file provided: not found` (Prática 07) | O terminal não está na pasta que contém o `docker-compose.yml`, ou o arquivo tem outro nome (ex.: `docker-compose.yml.yaml`). |
+| `failed to read dockerfile` / `open Dockerfile.backend: no such file or directory` (Prática 07) | Nome do Dockerfile diferente do esperado pelo `docker-compose.yml` (ex.: `Dockerfile_backend.txt`). Renomeie para `Dockerfile.backend`. |
+| `container ... is not running` ao rodar `docker exec` (Prática 07) | Os containers pararam (terminal fechado ou `Ctrl+C` sem `-d`). Rode `docker compose up -d` de novo antes do `docker exec`. |
+| `ModuleNotFoundError: No module named 'dashboard'` (Prática 07) | Falta `PYTHONPATH=/app` no serviço `dashboard` do `docker-compose.yml`. |
+| Filtros vazios e "Nenhum dado encontrado" no dashboard (Prática 07) | Banco do Mongo vazio (rode o seed) ou `API_URL` apontando para `localhost` em vez do nome do serviço `backend`. |
