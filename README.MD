@@ -26,12 +26,12 @@ Directory structure:
     │   └── Pratica04/
     │       └── Pratica04/
     │           ├── .env.example
-    │           ├── code/               # versão híbrida (v1)
+    │           ├── code/       # versão híbrida (v1)
     │           │   ├── db_utils.py
     │           │   ├── requirements.txt
     │           │   └── streamlit_app.py
     │           └── code-4/
-    │               └── code/           # versão MongoDB (v2)
+    │               └── code/       # versão MongoDB (v2)
     │                   ├── db_utils.py
     │                   ├── ingest_openf1.py
     │                   ├── requirements.txt
@@ -71,7 +71,7 @@ Directory structure:
                     │       └── sql_models.py
                     ├── dashboard/
                     │   ├── app.py
-                    │   └── components/  # antes chamada `pages/` (ver Pontos de atenção)
+                    │   └── components/     # antes chamada `pages/` (ver Pontos de atenção)
                     │       ├── analytics.py
                     │       └── map_view.py
                     └── scripts/
